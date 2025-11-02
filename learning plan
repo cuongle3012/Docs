@@ -1,0 +1,31 @@
+Learning Plan - Design Implementation
+Introduction
+This learning plan outlines the technical areas I aim to strengthen to further develop my skills in ASIC Design Implementation, with a focus on synthesis, timing, physical design, verification, and automation scripting.
+Synthesis
+- Run full block-level synthesis independently
+- Understand and apply optimization strategies
+- Perform comprehensive synthesis checklist review (QoR, DRC, warnings)
+- Improve analysis skills for timing, area, and power reports
+Static Timing Analysis (STA)
+- Run sign‑off level STA and evaluate timing closure
+- Deepen understanding of timing arc modeling and violation analysis
+- Learn and write complete timing constraints (SDC)
+- Debug setup, hold, and clock path violations across corners
+Place & Route (P&R)
+- Execute P&R flow including placement, CTS, and routing
+- Investigate optimization strategies for congestion, timing, power
+- Analyze reports: utilization, routing, IR drop, DRC
+- Learn advanced physical design techniques and sign‑off preparation
+Logic Equivalence Check (LEC)
+- Gain deeper understanding of LEC flow and methodologies
+- Investigate LEC mismatch cases and debugging path
+- Document root cause and best practices to avoid common issues
+Scripting & Automation
+- Improve scripting skills (TCL/Python/Shell)
+- Write automation scripts to:
+  • generate and apply timing constraints
+  • summarize and format reports automatically
+  • assist debugging and flow enhancements
+- Build reusable internal scripts/toolkits
+Conclusion
+This plan will guide my next phase of growth toward becoming a strong VLSI design implementation engineer, capable of owning block‑level flow, debugging complex timing and equivalence issues, and contributing automation solutions.
