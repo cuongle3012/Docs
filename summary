@@ -1,0 +1,35 @@
+Internship Report - Design Implementation at Ampere
+Introduction
+During my internship at Ampere as a Design Implementation intern, I learned the professional workflow and methodologies in ASIC design, focusing on Synthesis, Static Timing Analysis (STA), Synopsys Design Constraints (SDC), Place & Route (P&R), and Logic Equivalence Check (LEC). The experience enhanced my practical knowledge of digital IC design and strengthened my understanding of industry-standard tool flows.
+Synthesis
+I learned the synthesis flow used in the company, including understanding tool setup, reading design RTL, and generating gate-level netlist. Key topics:
+- Company synthesis flow and environment setup
+- Inputs: RTL, SDC, technology library, constraints
+- Outputs: gate-level netlist, log files, synthesis reports
+- Stages: elaboration, mapping, optimization, timing closure
+- Ability to analyze timing, power, area reports
+- Checklist before and after synthesis (warnings, violations, QoR review)
+Static Timing Analysis (STA)
+I learned the definition and workflow of STA, which verifies timing for all paths. Key learning points:
+- Inputs: gate-level netlist, SDC constraints, libraries, parasitics (post-P&R)
+- Outputs: timing reports, slack information, annotated netlist
+- Debugging setup and hold violations
+- Wrote scripts to summarize and filter timing reports
+- Understood multi-corner, multi-mode (MCMM) concepts
+SDC (Synopsys Design Constraints)
+I studied SDC commands and learned how constraints affect synthesis and STA.
+- Clock definitions (create_clock, create_generated_clock)
+- Input/output delays, false paths, multicycle paths
+- Analyzed constraint impact through reports and timing feedback
+Place & Route (P&R)
+I learned about the P&R flow and tools used to physically implement the design.
+- Inputs: synthesized netlist, floorplan, constraints, tech files
+- Outputs: layout, DEF, GDSII, parasitics (SPEF/SDF), reports
+- Stages: floorplanning, placement, CTS, routing, signoff
+- Analyzed utilization, congestion, timing, and DRC/LVS reports
+Logic Equivalence Check (LEC)
+I performed LEC to ensure functional equivalence between RTL and synthesized netlist.
+- Definition: verifies no functional change between two representations
+- Ran LEC checks, debug mismatches, and followed checklist for signoff
+Conclusion
+This internship gave me strong hands‑on experience with ASIC design flows and EDA tools. I improved technical skills in synthesis, STA, SDC, P&R, and LEC while understanding real‑world design methodologies. The experience prepared me for a professional career in VLSI design implementation.
