@@ -1,0 +1,65 @@
+#!/bin/csh -f
+
+# Đường dẫn file của bạn
+set file1 = "/path/to/your/file1.txt"
+set file2 = "/path/to/your/file2.txt"
+
+set out_rpt = "compare_timing.rpt"
+set out_csv = "compare_timing.csv"
+
+if ( ! -f $file1 || ! -f $file2 ) then
+    echo "Error: Check input file paths."
+    exit 1
+endif
+
+awk ' \
+BEGIN { \
+    # Định dạng RPT: Pin | Type | File 1 (R,A,S) | File 2 (R,A,S) | Diff (R,A,S) \
+    fmt = "%-35s %-12s | %-7s %-7s %-7s | %-7s %-7s %-7s | %-7s %-7s %-7s\n"; \
+    \
+    # Header RPT \
+    printf fmt, "Pin", "Type", "R1", "A1", "S1", "R2", "A2", "S2", "dR", "dA", "dS" > "'$out_rpt'"; \
+    print "------------------------------------------------------------------------------------------------------------------------" > "'$out_rpt'"; \
+    \
+    # Header CSV \
+    print "Pin,Type,Req1,Act1,Slk1,Req2,Act2,Slk2,Diff_Req,Diff_Act,Diff_Slk" > "'$out_csv'"; \
+} \
+NR == FNR { \
+    if ($1 != "Required") { r1[$4]=$1; a1[$4]=$2; s1[$4]=$3; exists1[$4]=1; } \
+    next; \
+} \
+{ \
+    if ($1 != "Required") { r2[$4]=$1; a2[$4]=$2; s2[$4]=$3; exists2[$4]=1; } \
+} \
+END { \
+    for (p in exists1) keys[p]; \
+    for (p in exists2) keys[p]; \
+    \
+    for (p in keys) { \
+        vR1 = (p in exists1) ? r1[p] : "NA"; \
+        vA1 = (p in exists1) ? a1[p] : "NA"; \
+        vS1 = (p in exists1) ? s1[p] : "NA"; \
+        vR2 = (p in exists2) ? r2[p] : "NA"; \
+        vA2 = (p in exists2) ? a2[p] : "NA"; \
+        vS2 = (p in exists2) ? s2[p] : "NA"; \
+        \
+        if (p in exists1 && p in exists2) { \
+            dR = vR1 - vR2; dA = vA1 - vA2; dS = vS1 - vS2; \
+            type = "Both"; \
+        } else if (p in exists1) { \
+            dR = dA = dS = "NA"; \
+            type = "Only_F1"; \
+        } else { \
+            dR = dA = dS = "NA"; \
+            type = "Only_F2"; \
+        } \
+        \
+        # Ghi ra RPT \
+        printf fmt, p, type, vR1, vA1, vS1, vR2, vA2, vS2, dR, dA, dS >> "'$out_rpt'"; \
+        \
+        # Ghi ra CSV \
+        printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n", p, type, vR1, vA1, vS1, vR2, vA2, vS2, dR, dA, dS >> "'$out_csv'"; \
+    } \
+}' $file1 $file2
+
+echo "Done! Type column is now next to Pin."
