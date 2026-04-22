@@ -1,0 +1,86 @@
+#!/bin/csh -f
+
+# 1. File Path Definitions
+set file1 = "/path/to/your/file1.txt"
+set file2 = "/path/to/your/file2.txt"
+set out_rpt = "compare_timing.rpt"
+set out_csv = "compare_timing.csv"
+
+# Check if input files exist
+if ( ! -f $file1 || ! -f $file2 ) then
+    echo "Error: Input file paths are invalid."
+    exit 1
+endif
+
+# 2. Pre-calculate maximum Pin name length for dynamic alignment in RPT
+# This ensures the table columns remain aligned regardless of Pin name length
+set max_len = `awk '{if($1!="Required" && length($4)>max) max=length($4)} END{print max+5}' $file1 $file2`
+
+# 3. Main AWK processing - Memory optimized logic
+awk -v ml="$max_len" ' \
+BEGIN { \
+    # Initialize RPT format with dynamic width (ml)
+    fmt = "%-" ml "s %-12s | %-8s %-8s %-8s | %-8s %-8s %-8s | %-8s %-8s %-8s\n"; \
+    \
+    # Generate RPT Header
+    printf fmt, "Pin", "Type", "R1", "A1", "S1", "R2", "A2", "S2", "dR", "dA", "dS" > "'$out_rpt'"; \
+    \
+    # Create dynamic horizontal separator line
+    line = ""; for(i=1; i<(ml+110); i++) line = line "-"; \
+    print line > "'$out_rpt'"; \
+    \
+    # Generate CSV Header
+    print "Pin,Type,Req1,Act1,Slk1,Req2,Act2,Slk2,Diff_Req,Diff_Act,Diff_Slk" > "'$out_csv'"; \
+} \
+\
+# Process File 1: Store timing metrics in associative arrays
+NR == FNR { \
+    if ($1 != "Required") { \
+        r1[$4]=$1; a1[$4]=$2; s1[$4]=$3; \
+        p_list[$4]=1; # Mark Pin as existing in File 1 \
+    } \
+    next; \
+} \
+\
+# Process File 2: Store timing metrics and determine Pin status
+{ \
+    if ($1 != "Required") { \
+        r2[$4]=$1; a2[$4]=$2; s2[$4]=$3; \
+        # State logic: 1 (F1 only), 2 (F2 only), 3 (Both) \
+        p_list[$4]=(p_list[$4]==1) ? 3 : 2; \
+    } \
+} \
+\
+END { \
+    # Iterate through all collected Pins
+    for (p in p_list) { \
+        # Retrieve values or assign "NA" if Pin is missing in one file
+        vR1 = (p in r1) ? r1[p] : "NA"; \
+        vA1 = (p in a1) ? a1[p] : "NA"; \
+        vS1 = (p in s1) ? s1[p] : "NA"; \
+        vR2 = (p in r2) ? r2[p] : "NA"; \
+        vA2 = (p in a2) ? a2[p] : "NA"; \
+        vS2 = (p in s2) ? s2[p] : "NA"; \
+        \
+        # Classification and Difference calculation
+        if (p_list[p] == 3) { \
+            type = "Both"; \
+            dR = sprintf("%.3f", vR1 - vR2); \
+            dA = sprintf("%.3f", vA1 - vA2); \
+            dS = sprintf("%.3f", vS1 - vS2); \
+        } else if (p_list[p] == 1) { \
+            type = "Only_F1"; dR = dA = dS = "NA"; \
+        } else { \
+            type = "Only_F2"; dR = dA = dS = "NA"; \
+        } \
+        \
+        # Output to RPT file (Formatted)
+        printf fmt, p, type, vR1, vA1, vS1, vR2, vA2, vS2, dR, dA, dS >> "'$out_rpt'"; \
+        \
+        # Output to CSV file (Comma separated)
+        printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n", p, type, vR1, vA1, vS1, vR2, vA2, vS2, dR, dA, dS >> "'$out_csv'"; \
+    } \
+}' $file1 $file2
+
+echo "Comparison finished successfully."
+echo "Reports generated: $out_rpt, $out_csv"
