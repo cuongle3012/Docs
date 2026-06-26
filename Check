@@ -1,0 +1,78 @@
+#################################################################################
+# Script: check_cdc_dft_lockup_latch.tcl
+# Mục đích: Tìm các đường CDC và kiểm tra xem có DFT Lockup Latch ở giữa không
+#           dựa trên keyword của tên Cell Instance.
+#################################################################################
+
+proc check_cdc_dft_lockup_latch {} {
+    echo "========================================================================"
+    echo " STARTING CDC DFT LOCKUP LATCH VERIFICATION "
+    echo "========================================================================"
+    
+    # Định nghĩa từ khóa cần tìm kiếm (hỗ trợ wildcard *)
+    # Thường công cụ sẽ đặt tên dạng: DFT_lockup_latch_inst, u_dft_lockup...
+    set keyword "*DFT_lockup_latch*"
+    
+    set all_clocks [get_object_name [get_clocks *]]
+    
+    foreach src_clk $all_clocks {
+        foreach dst_clk $all_clocks {
+            
+            if {$src_clk == $dst_clk} { continue }
+            
+            # Lấy timing paths giữa 2 miền clock bất đồng bộ
+            set cdc_paths [get_timing_paths -from [get_clocks $src_clk] -to [get_clocks $dst_clk] -max_paths 1000 -delay_type max]
+            
+            if {[llength $cdc_paths] == 0} { continue }
+            
+            echo "Checking CDC path from clock '$src_clk' to '$dst_clk'..."
+            
+            foreach_in_collection path $cdc_paths {
+                set src_pin [get_object_name [get_attribute $path startpoint]]
+                set dst_pin [get_object_name [get_attribute $path endpoint]]
+                
+                set points [get_attribute $path points]
+                set has_dft_latch 0
+                set latch_name ""
+                
+                # Duyệt qua các điểm trên data path
+                foreach_in_collection pt $points {
+                    set pin [get_attribute $pt object]
+                    set cell [get_cells -of_objects $pin]
+                    
+                    if {[llength $cell] > 0} {
+                        set cell_name [get_object_name $cell]
+                        
+                        # Cách 1: Kiểm tra xem tên cell INSTANCE có chứa keyword hay không
+                        if {[string match $keyword $cell_name]} {
+                            set has_dft_latch 1
+                            set latch_name $cell_name
+                            break
+                        }
+                        
+                        # Cách 2 (Bổ sung nếu cần): Kiểm tra tên của thư viện gốc (Library Cell)
+                        # set ref_name [get_attribute $cell ref_name]
+                        # if {[string match "*latch*" $ref_name] && [string match "*DFT*" $cell_name]} { ... }
+                    }
+                }
+                
+                # Báo cáo kết quả
+                if {$has_dft_latch} {
+                    echo "  \[PASS\] CDC Path: $src_pin -> $dst_pin"
+                    echo "         Tìm thấy DFT Lockup Latch: $latch_name"
+                } else {
+                    echo "  \[FAIL\] CDC Path THÔNG CÓ DFT LOCKUP LATCH!"
+                    echo "         Source: $src_pin ($src_clk)"
+                    echo "         Dest  : $dst_pin ($dst_clk)"
+                    echo "  --------------------------------------------------------------"
+                }
+            }
+        }
+    }
+    echo "========================================================================"
+    echo " VERIFICATION COMPLETE "
+    echo "========================================================================"
+}
+
+# Thực thi câu lệnh
+check_cdc_dft_lockup_latch
