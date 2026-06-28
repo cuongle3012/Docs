@@ -1,0 +1,89 @@
+#################################################################################
+# Procedure: check_shift_cdc_lockup
+# Purpose: Check timing paths crossing different clock domains (CDC) 
+#          in Shift Mode to ensure they pass through a Lockup Latch.
+# Identification Method: Checks if the cell's Instance name contains 'lock_up_latch'.
+#################################################################################
+
+proc check_shift_cdc_lockup { {max_paths_per_pair 100} } {
+    puts "=================================================================="
+    puts " STARTING LOCKUP LATCH CHECK ON CDC PATHS (INSTANCE MATCHING) "
+    puts "=================================================================="
+    
+    set missing_lockup_count 0
+    set all_clocks [get_clocks *]
+    
+    # Iterate through each pair of Launch and Capture clocks to find CDC paths
+    foreach_in_collection clk_launch $all_clocks {
+        foreach_in_collection clk_capture $all_clocks {
+            
+            set name_launch [get_object_name $clk_launch]
+            set name_capture [get_object_name $clk_capture]
+            
+            # Skip if they belong to the same Clock Domain
+            if {$name_launch == $name_capture} { 
+                continue 
+            }
+            
+            # Get timing paths evaluated for hold time (min delay) between the 2 domains.
+            # Tip: If you want to restrict the check strictly to the Scan Chain routing, 
+            # uncomment the line below and comment out the subsequent one.
+            # set paths [get_timing_paths -from $clk_launch -to $clk_capture -max_paths $max_paths_per_pair -delay_type min -through [get_pins -hier *\/SI]]
+            set paths [get_timing_paths -from $clk_launch -to $clk_capture -max_paths $max_paths_per_pair -delay_type min]
+            
+            foreach_in_collection path $paths {
+                set has_lockup 0
+                set path_points [get_attribute $path points]
+                
+                # Traverse each node (point) along the timing path
+                foreach_in_collection point $path_points {
+                    set pin [get_attribute $point object]
+                    set cell [get_cells -of_objects $pin -quiet]
+                    
+                    if {[sizeof_collection $cell] > 0} {
+                        set inst_name [get_object_name $cell]
+                        set ref_name  [get_attribute $cell ref_name -quiet]
+                        set is_seq    [get_attribute $cell is_sequential -quiet]
+                        
+                        # 1. CHECK BY INSTANCE NAME (Primary Requirement)
+                        set match_inst [regexp -nocase {lock_up_latch} $inst_name]
+                        
+                        # 2. FALLBACK CHECK (Library attributes, in case of non-standard naming)
+                        set is_lib_latch [get_attribute [get_lib_cells -of $cell] is_latch -quiet]
+                        set match_ref    [regexp -nocase {LAT|LD} $ref_name]
+                        
+                        # If it matches the instance name criteria OR is a dedicated Latch structure
+                        if {$match_inst == 1 || ($is_seq == "true" && $match_ref == 1) || $is_lib_latch == "true"} {
+                            set has_lockup 1
+                            break ; # Lockup Latch found on this path, move to the next path
+                        }
+                    }
+                }
+                
+                # Report if no Lockup Latch is found along the entire path
+                if {$has_lockup == 0} {
+                    set start_pin [get_object_name [get_attribute $path startpoint]]
+                    set end_pin   [get_object_name [get_attribute $path endpoint]]
+                    set slack     [get_attribute $path slack]
+                    
+                    puts "WARNING: CDC path missing Lockup Latch detected!"
+                    puts "  - Domain Direction: $name_launch -> $name_capture"
+                    puts "  - Launch Flop     : $start_pin"
+                    puts "  - Capture Flop    : $end_pin"
+                    puts "  - Current Slack   : $slack"
+                    puts "------------------------------------------------------------------"
+                    incr missing_lockup_count
+                }
+            }
+        }
+    }
+    
+    puts "=================================================================="
+    if {$missing_lockup_count == 0} {
+        puts "SUCCESS: All analyzed CDC paths have valid Lockup Latches inserted."
+    } else {
+        puts "RESULT: Found a TOTAL of $missing_lockup_count CDC paths missing a Lockup Latch."
+        puts "Recommendation: Review the DFT setup (Scan Chain Synthesis) or report this to the design team."
+    }
+    puts "=================================================================="
+}
